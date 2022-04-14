@@ -192,11 +192,12 @@ module pulse_sync_tb;
   // -------------------------------------------------------------------
   // Dump File Generation
   // -------------------------------------------------------------------
+  `ifdef DUMP_VCD
   initial
   begin
     $dumpfile( "pulse_sync.vcd" );
     $dumpvars( 0, pulse_sync_tb );
   end
-
+  `endif
 
 endmodule

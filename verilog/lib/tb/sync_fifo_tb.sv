@@ -28,7 +28,7 @@ module sync_fifo_tb;
 
   // Clock/Reset Signals
   logic                         fifo_clk;
-  logic                         fifo_rst_n;
+  logic                         fifo_rst;
 
   // FIFO Write Port
   logic                         fifo_wen;
@@ -74,7 +74,7 @@ module sync_fifo_tb;
 
     // Clock/Reset Signals
     .fifo_clk                   ( fifo_clk   ),
-    .fifo_rst_n                 ( fifo_rst_n ),
+    .fifo_rst                   ( fifo_rst   ),
 
     // FIFO Write Port
     .fifo_wen                   ( fifo_wen   ),
@@ -110,13 +110,13 @@ module sync_fifo_tb;
   begin
   
     // Initializing Reset Signal
-    fifo_rst_n  =  1'b1;
+    fifo_rst    =  1'b0;
     
     @( negedge fifo_clk );
     
     // Asserting Reset
     $display ( ">>\n>> INFO: Resetting DUT..." );
-    fifo_rst_n  =  1'b0;
+    fifo_rst    =  1'b1;
     
     // Resetting DUT I/O Signals
     fifo_wen    <= 1'b0;
@@ -126,7 +126,7 @@ module sync_fifo_tb;
     repeat ( 5 ) @( negedge fifo_clk );
 
     // De-asserting Reset
-    fifo_rst_n  =  1'b1; 
+    fifo_rst    =  1'b0;
   end
 
 
@@ -144,7 +144,7 @@ module sync_fifo_tb;
 
 
     // Waiting for Reset to be de-asserted
-    @( posedge fifo_rst_n );
+    @( negedge fifo_rst );
     
     repeat ( 10 ) @( negedge fifo_clk );
 
@@ -177,17 +177,17 @@ module sync_fifo_tb;
 
         repeat ( 10 ) @( negedge fifo_clk );
 
-        while ( !stop_sim )
+        while ( !(stop_sim && fifo_empty) )
         begin
           @( negedge fifo_clk );
           fifo_ren  = ~fifo_empty | ( fifo_empty & fifo_wen );
 
           if ( fifo_rdata == fifo_rcnt[ FIFO_WIDTH-1 : 0 ] )
-            $display ( ">>\n>> INFO: Data Read from FIFO @ %0t: %2h", $time, fifo_rdata );
-          else
+            $display ( ">>\n>> INFO: Data Read from FIFO @ %0t: 0x%h", $time, fifo_rdata );
+          else if ( !fifo_empty )
           begin
             $display ( ">>\n>> ERROR: Data Mismatch @ %0t...", $time );
-            $display ( ">> ERROR: FIFO Read Data = %2h; Expected Data = %2h", 
+            $display ( ">> ERROR: FIFO Read Data = 0x%h; Expected Data = 0x%h", 
                         fifo_rdata, fifo_rcnt[ FIFO_WIDTH-1 : 0 ] );
             err_cnt = err_cnt + 1;
           end
@@ -200,7 +200,7 @@ module sync_fifo_tb;
 
       end
 
-
+	
       // Ending Simulation 
       begin
         $display ( ">>\n>> INFO: Ending Simulation..." );
@@ -226,11 +226,12 @@ module sync_fifo_tb;
   // -------------------------------------------------------------------
   // Dump File Generation
   // -------------------------------------------------------------------
+  `ifdef DUMP_VCD
   initial
   begin
     $dumpfile( "sync_fifo.vcd" );
     $dumpvars( 0, sync_fifo_tb );
   end
-
+  `endif
 
 endmodule

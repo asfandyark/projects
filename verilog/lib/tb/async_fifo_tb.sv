@@ -28,7 +28,7 @@ module async_fifo_tb;
   // -----------------------------------------------------------
 
   // Reset Signal
-  logic                         fifo_rst_n;
+  logic                         fifo_rst;
 
   // FIFO Write Port
   logic                         fifo_wclk;
@@ -76,14 +76,14 @@ module async_fifo_tb;
 
     // FIFO Write Port
     .fifo_wclk                  ( fifo_wclk  ),
-    .fifo_wrst_n                ( fifo_rst_n ),
+    .fifo_wrst                  ( fifo_rst   ),
     .fifo_wen                   ( fifo_wen   ),
     .fifo_wdata                 ( fifo_wdata ),
     .fifo_full                  ( fifo_full  ),
 
     // FIFO Read Port
     .fifo_rclk                  ( fifo_rclk  ),
-    .fifo_rrst_n                ( fifo_rst_n ),    
+    .fifo_rrst                  ( fifo_rst   ),    
     .fifo_ren                   ( fifo_ren   ),
     .fifo_rdata                 ( fifo_rdata ),
     .fifo_empty                 ( fifo_empty )
@@ -114,13 +114,13 @@ module async_fifo_tb;
   begin
   
     // Initializing Reset Signal
-    fifo_rst_n  =  1'b1;
+    fifo_rst    =  1'b0;
     
     #10;
 
     // Asserting Reset
     $display ( ">>\n>> INFO: Resetting DUT..." );
-    fifo_rst_n  =  1'b0;
+    fifo_rst    =  1'b1;
     
     // Resetting DUT I/O Signals
     fifo_wen    <= 1'b0;
@@ -130,7 +130,7 @@ module async_fifo_tb;
     #100;
 
     // De-asserting Reset
-    fifo_rst_n  =  1'b1; 
+    fifo_rst    =  1'b0; 
   end
 
 
@@ -148,7 +148,7 @@ module async_fifo_tb;
 
 
     // Waiting for Reset to be de-asserted
-    @( posedge fifo_rst_n );
+    @( negedge fifo_rst );
     
     #100;
 
@@ -181,17 +181,17 @@ module async_fifo_tb;
 
         repeat ( 10 ) @( negedge fifo_rclk );
 
-        while ( !stop_sim )
+        while ( !(stop_sim && fifo_empty) )
         begin
           @( negedge fifo_rclk );
           fifo_ren  = ~fifo_empty;
 
           if ( fifo_rdata == fifo_rcnt[ FIFO_WIDTH-1 : 0 ] )
-            $display ( ">>\n>> INFO: Data Read from FIFO @ %0t: %2h", $time, fifo_rdata );
-          else
+            $display ( ">>\n>> INFO: Data Read from FIFO @ %0t: 0x%h", $time, fifo_rdata );
+          else if ( !fifo_empty )
           begin
             $display ( ">>\n>> ERROR: Data Mismatch @ %0t...", $time );
-            $display ( ">> ERROR: FIFO Read Data = %2h; Expected Data = %2h", 
+            $display ( ">> ERROR: FIFO Read Data = 0x%h; Expected Data = 0x%h", 
                         fifo_rdata, fifo_rcnt[ FIFO_WIDTH-1 : 0 ] );
             err_cnt = err_cnt + 1;
           end
@@ -230,11 +230,12 @@ module async_fifo_tb;
   // -------------------------------------------------------------------
   // Dump File Generation
   // -------------------------------------------------------------------
+  `ifdef DUMP_VCD
   initial
   begin
     $dumpfile( "async_fifo.vcd" );
     $dumpvars( 0, async_fifo_tb );
   end
-
+  `endif
 
 endmodule
